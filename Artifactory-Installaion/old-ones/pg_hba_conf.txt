@@ -1,0 +1,37 @@
+# Update pg_hba.conf
+vi /var/lib/pgsql/data/pg_hba.conf
+
+# ----------------------------------
+# Put your actual configuration here
+# ----------------------------------
+#
+# If you want to allow non-local connections, you need to add more
+# "host" records.  In that case you will also need to make PostgreSQL
+# listen on a non-local interface via the listen_addresses
+# configuration parameter, or via the -i or -h command line switches.
+
+
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     peer
+
+# Allow Artifactory user to connect locally with password
+local   artifactory     artifactory                             scram-sha-256
+
+# IPv4 local connections:
+host    artifactory     artifactory     127.0.0.1/32            scram-sha-256
+host    all             all             127.0.0.1/32            ident
+
+# IPv6 local connections:
+host    all             all             ::1/128                 ident
+
+# Allow replication connections from localhost, by a user with the
+# replication privilege.
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            ident
+host    replication     all             ::1/128                 ident
+
+# Restart the service
+systemctl reload postgresql

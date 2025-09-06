@@ -1,0 +1,116 @@
+sudo dnf install -y wget
+
+# Enable PostgreSQL 16 repo and install
+sudo dnf module enable -y postgresql:16
+sudo dnf install -y postgresql-server postgresql-contrib
+
+# Initialize database
+sudo postgresql-setup --initdb
+
+# Enable and Start service
+sudo systemctl enable postgresql
+sudo systemctl start postgresql
+
+# Create Artifactory DB and User
+sudo -u postgres psql
+CREATE USER artifactory WITH PASSWORD 'StrongPasswordHere';
+CREATE DATABASE artifactory OWNER artifactory;
+\c artifactory
+ALTER SCHEMA public OWNER TO artifactory;
+
+# update password
+sudo -u postgres psql
+ALTER USER artifactory WITH PASSWORD 'StrongPasswordHere';
+\q
+
+# Update pg_hba.conf
+vi /var/lib/pgsql/data/pg_hba.conf
+
+# ----------------------------------
+# Put your actual configuration here
+# ----------------------------------
+#
+# If you want to allow non-local connections, you need to add more
+# "host" records.  In that case you will also need to make PostgreSQL
+# listen on a non-local interface via the listen_addresses
+# configuration parameter, or via the -i or -h command line switches.
+
+
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     peer
+
+# Allow Artifactory user to connect locally with password
+local   artifactory     artifactory                             scram-sha-256
+
+# IPv4 local connections:
+host    artifactory     artifactory     127.0.0.1/32            scram-sha-256
+host    all             all             127.0.0.1/32            ident
+
+# IPv6 local connections:
+host    all             all             ::1/128                 ident
+
+# Allow replication connections from localhost, by a user with the
+# replication privilege.
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            ident
+host    replication     all             ::1/128                 ident
+
+# Restart the service
+systemctl reload postgresql
+
+
+************************** now setup Artifactory using repo***********************
+# Set JFROG_HOME Variable
+export JFROG_HOME=/opt/jfrog
+
+# Download repo
+wget https://releases.jfrog.io/artifactory/artifactory-pro-rpms/artifactory-pro-rpms.repo -O jfrog-artifactory-pro-rpms.repo
+
+# Move repo file
+sudo mv jfrog-artifactory-pro-rpms.repo /etc/yum.repos.d/
+
+# Firewall enteries
+sudo firewall-cmd --permanent --add-port=8082/tcp
+sudo firewall-cmd --reload
+
+# Install the version you want to install 
+dnf update && sudo dnf install jfrog-artifactory-pro-7.117.15
+
+# Configure Artifactory to Use PostgreSQL:
+vi /opt/jfrog/artifactory/var/etc/system.yaml
+
+    ## Example for postgresql
+       type: postgresql
+       driver: org.postgresql.Driver
+       url: "jdbc:postgresql://127.0.0.1:5432/artifactory"
+       username: artifactory
+       password: StrongPasswordHere
+
+
+# Start the Artifactory
+systemctl start artifactory.service
+sudo -u artifactory /bin/bash /opt/jfrog/artifactory/app/bin/artifactoryManage.sh start
+
+##### if you see permissoin error then CHOWN the file and run the start command again. 
+2025-09-05T15:42:54.712Z [shell] [INFO ] [] [systemYamlHelper.sh:650       ] [main] - Resolved .shared.database.type (postgresql) from /opt/jfrog/artifactory/var/etc/system.yaml
+2025-09-05T15:42:54.790Z [shell] [INFO ] [] [systemYamlHelper.sh:650       ] [main] - Resolved .shared.database.type (postgresql) from /opt/jfrog/artifactory/var/etc/system.yaml
+cat: /var/run/artifactory.pid: Permission denied
+/bin/netstat
+2025-09-05T15:42:54.845Z [shell] [INFO ] [] [artifactoryManage.sh:134      ] [main] - Artifactory Tomcat already started
+#######################################################
+
+# Chown file to fix permission issue.
+chown artifactory:artifactory /var/run/artifactory.pid
+
+# Start the service
+sudo -u artifactory /bin/bash /opt/jfrog/artifactory/app/bin/artifactoryManage.sh start
+
+
+############ it will look like this##########################
+2025-09-05T15:43:09.768Z [shell] [INFO ] [] [systemYamlHelper.sh:650       ] [main] - Resolved .shared.database.type (postgresql) from /opt/jfrog/artifactory/var/etc/system.yaml
+2025-09-05T15:43:09.844Z [shell] [INFO ] [] [systemYamlHelper.sh:650       ] [main] - Resolved .shared.database.type (postgresql) from /opt/jfrog/artifactory/var/etc/system.yaml
+/bin/netstat
+2025-09-05T15:43:09.914Z [shell] [INFO ] [] [artifactoryManage.sh:134      ] [main] - Artifactory Tomcat already started

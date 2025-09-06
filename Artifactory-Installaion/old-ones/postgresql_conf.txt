@@ -1,0 +1,98 @@
+# -----------------------------
+# PostgreSQL configuration file
+# -----------------------------
+
+#------------------------------------------------------------------------------
+# FILE LOCATIONS
+#------------------------------------------------------------------------------
+data_directory = '/var/lib/pgsql/data'
+hba_file = '/var/lib/pgsql/data/pg_hba.conf'
+ident_file = '/var/lib/pgsql/data/pg_ident.conf'
+
+#------------------------------------------------------------------------------
+# CONNECTIONS AND AUTHENTICATION
+#------------------------------------------------------------------------------
+
+listen_addresses = 'localhost'          # only local connections
+# listen_addresses = '*'                # uncomment for remote access
+port = 5432
+max_connections = 200
+superuser_reserved_connections = 3
+
+password_encryption = scram-sha-256
+
+#------------------------------------------------------------------------------
+# RESOURCE USAGE (MEMORY)
+#------------------------------------------------------------------------------
+shared_buffers = 2GB                    # ~25% of 8GB RAM
+work_mem = 16MB                         # per sort/join operation
+maintenance_work_mem = 256MB            # for vacuum, reindex
+effective_cache_size = 6GB              # ~70% of 8GB RAM
+autovacuum_work_mem = -1
+max_worker_processes = 8
+max_parallel_workers_per_gather = 4
+max_parallel_maintenance_workers = 4
+max_parallel_workers = 8
+
+#------------------------------------------------------------------------------
+# WRITE-AHEAD LOG
+#------------------------------------------------------------------------------
+wal_level = replica
+wal_buffers = 16MB
+max_wal_size = 2GB
+min_wal_size = 80MB
+checkpoint_completion_target = 0.9
+wal_compression = on
+
+#------------------------------------------------------------------------------
+# REPLICATION
+#------------------------------------------------------------------------------
+max_wal_senders = 5
+wal_keep_size = 128MB
+
+#------------------------------------------------------------------------------
+# QUERY TUNING
+#------------------------------------------------------------------------------
+random_page_cost = 1.1
+effective_io_concurrency = 200
+parallel_setup_cost = 1000.0
+parallel_tuple_cost = 0.1
+default_statistics_target = 100
+
+#------------------------------------------------------------------------------
+# LOGGING
+#------------------------------------------------------------------------------
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-%a.log'
+log_truncate_on_rotation = on
+log_rotation_age = 1d
+log_rotation_size = 0
+log_line_prefix = '%m [%p] %u@%d '
+log_timezone = 'America/New_York'
+log_statement = 'none'
+log_min_duration_statement = 2000       # log queries > 2s
+
+#------------------------------------------------------------------------------
+# LOCALE / FORMAT
+#------------------------------------------------------------------------------
+datestyle = 'iso, mdy'
+timezone = 'America/New_York'
+lc_messages = 'en_US.UTF-8'
+lc_monetary = 'en_US.UTF-8'
+lc_numeric = 'en_US.UTF-8'
+lc_time = 'en_US.UTF-8'
+
+#------------------------------------------------------------------------------
+# AUTOVACUUM
+#------------------------------------------------------------------------------
+autovacuum = on
+autovacuum_max_workers = 5
+autovacuum_naptime = 30s
+autovacuum_vacuum_scale_factor = 0.2
+autovacuum_analyze_scale_factor = 0.1
+
+#------------------------------------------------------------------------------
+# CUSTOMIZED OPTIONS
+#------------------------------------------------------------------------------
+default_text_search_config = 'pg_catalog.english'
